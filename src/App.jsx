@@ -43,26 +43,21 @@ function SystemBackground() {
     const ctx = canvas.getContext("2d");
     let w = window.innerWidth,
       h = window.innerHeight;
-
     const resize = () => {
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
     };
     resize();
     window.addEventListener("resize", resize);
-
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
       const nodes = nodesRef.current;
-
       nodes.forEach((n) => {
         n.x += n.dx;
         n.y += n.dy;
         if (n.x < 0 || n.x > 100) n.dx *= -1;
         if (n.y < 0 || n.y > 100) n.dy *= -1;
       });
-
-      // Draw edges
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = (nodes[i].x - nodes[j].x) * (w / 100);
@@ -78,8 +73,6 @@ function SystemBackground() {
           }
         }
       }
-
-      // Draw nodes
       nodes.forEach((n) => {
         const px = (n.x * w) / 100,
           py = (n.y * h) / 100;
@@ -91,10 +84,8 @@ function SystemBackground() {
         ctx.lineWidth = 1;
         ctx.stroke();
       });
-
       animRef.current = requestAnimationFrame(draw);
     };
-
     draw();
     return () => {
       window.removeEventListener("resize", resize);
@@ -122,7 +113,6 @@ function SystemBackground() {
 function TerminalBoot({ onDone }) {
   const [lines, setLines] = useState([]);
   const [done, setDone] = useState(false);
-
   useEffect(() => {
     TERMINAL_LINES.forEach((l) => {
       setTimeout(() => {
@@ -134,7 +124,6 @@ function TerminalBoot({ onDone }) {
       }, l.delay);
     });
   }, []);
-
   return (
     <div
       style={{
@@ -148,16 +137,18 @@ function TerminalBoot({ onDone }) {
         transition: "opacity 0.6s",
         opacity: done ? 0 : 1,
         pointerEvents: done ? "none" : "all",
+        padding: "1rem",
       }}
     >
       <div
         style={{
           fontFamily: "'Fira Code', monospace",
           color: "#00ff9f",
-          fontSize: "clamp(13px,2vw,17px)",
+          fontSize: "clamp(11px,3vw,17px)",
           lineHeight: 2.2,
-          padding: "2rem",
-          minWidth: 340,
+          padding: "1.5rem 2rem",
+          width: "100%",
+          maxWidth: 480,
           background: "rgba(0,255,160,0.03)",
           border: "1px solid rgba(0,255,160,0.15)",
           borderRadius: 4,
@@ -165,7 +156,10 @@ function TerminalBoot({ onDone }) {
         }}
       >
         {lines.map((l, i) => (
-          <div key={i} style={{ animation: "fadeIn 0.3s ease" }}>
+          <div
+            key={i}
+            style={{ animation: "fadeIn 0.3s ease", wordBreak: "break-word" }}
+          >
             {l}
           </div>
         ))}
@@ -177,65 +171,179 @@ function TerminalBoot({ onDone }) {
 
 function NavBar({ active, setActive }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isMobile = useWindowWidth() < 768;
+
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  // Close menu on section click
+  const handleNavClick = (s) => {
+    setActive(s);
+    setMenuOpen(false);
+  };
+
   return (
-    <nav
-      style={{
-        position: "fixed",
-        top: 0,
-        width: "100%",
-        zIndex: 50,
-        background: scrolled ? "rgba(5,14,10,0.92)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
-        borderBottom: scrolled ? "1px solid rgba(0,255,160,0.1)" : "none",
-        transition: "all 0.3s",
-        padding: "0 2rem",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        height: 60,
-      }}
-    >
-      <span
+    <>
+      <nav
         style={{
-          fontFamily: "'Fira Code', monospace",
-          color: "#00ff9f",
-          fontSize: 15,
-          letterSpacing: 2,
+          position: "fixed",
+          top: 0,
+          width: "100%",
+          zIndex: 50,
+          background:
+            scrolled || menuOpen ? "rgba(5,14,10,0.96)" : "transparent",
+          backdropFilter: scrolled || menuOpen ? "blur(12px)" : "none",
+          borderBottom: scrolled ? "1px solid rgba(0,255,160,0.1)" : "none",
+          transition: "all 0.3s",
+          padding: "0 clamp(1rem,5vw,2rem)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          height: 60,
+          boxSizing: "border-box",
         }}
       >
-        &gt; kartik.sh
-      </span>
-      <div style={{ display: "flex", gap: "1.8rem" }}>
-        {SECTIONS.slice(1).map((s) => (
-          <a
-            key={s}
-            href={`#${s}`}
-            onClick={() => setActive(s)}
+        <span
+          style={{
+            fontFamily: "'Fira Code', monospace",
+            color: "#00ff9f",
+            fontSize: "clamp(12px,3vw,15px)",
+            letterSpacing: 2,
+          }}
+        >
+          &gt; kartik.sh
+        </span>
+
+        {/* Desktop nav */}
+        {!isMobile && (
+          <div style={{ display: "flex", gap: "clamp(1rem,3vw,1.8rem)" }}>
+            {SECTIONS.slice(1).map((s) => (
+              <a
+                key={s}
+                href={`#${s}`}
+                onClick={() => handleNavClick(s)}
+                style={{
+                  fontFamily: "'Fira Code', monospace",
+                  color: active === s ? "#00ff9f" : "rgba(255,255,255,0.45)",
+                  fontSize: 12,
+                  letterSpacing: 1.5,
+                  textDecoration: "none",
+                  textTransform: "uppercase",
+                  transition: "color 0.2s",
+                  borderBottom:
+                    active === s
+                      ? "1px solid #00ff9f"
+                      : "1px solid transparent",
+                  paddingBottom: 2,
+                }}
+              >
+                {s}
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Hamburger */}
+        {isMobile && (
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
             style={{
-              fontFamily: "'Fira Code', monospace",
-              color: active === s ? "#00ff9f" : "rgba(255,255,255,0.45)",
-              fontSize: 12,
-              letterSpacing: 1.5,
-              textDecoration: "none",
-              textTransform: "uppercase",
-              transition: "color 0.2s",
-              borderBottom:
-                active === s ? "1px solid #00ff9f" : "1px solid transparent",
-              paddingBottom: 2,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 8,
+              display: "flex",
+              flexDirection: "column",
+              gap: 5,
             }}
+            aria-label="Toggle menu"
           >
-            {s}
-          </a>
-        ))}
-      </div>
-    </nav>
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                style={{
+                  display: "block",
+                  width: 22,
+                  height: 2,
+                  background: "#00ff9f",
+                  borderRadius: 2,
+                  transition: "all 0.3s",
+                  transform:
+                    menuOpen && i === 0
+                      ? "rotate(45deg) translate(5px,5px)"
+                      : menuOpen && i === 1
+                        ? "scaleX(0)"
+                        : menuOpen && i === 2
+                          ? "rotate(-45deg) translate(5px,-5px)"
+                          : "none",
+                  opacity: menuOpen && i === 1 ? 0 : 1,
+                }}
+              />
+            ))}
+          </button>
+        )}
+      </nav>
+
+      {/* Mobile dropdown menu */}
+      {isMobile && (
+        <div
+          style={{
+            position: "fixed",
+            top: 60,
+            left: 0,
+            width: "100%",
+            zIndex: 49,
+            background: "rgba(5,14,10,0.97)",
+            backdropFilter: "blur(12px)",
+            borderBottom: "1px solid rgba(0,255,160,0.1)",
+            overflow: "hidden",
+            maxHeight: menuOpen ? 400 : 0,
+            transition: "max-height 0.35s ease",
+          }}
+        >
+          {SECTIONS.slice(1).map((s) => (
+            <a
+              key={s}
+              href={`#${s}`}
+              onClick={() => handleNavClick(s)}
+              style={{
+                display: "block",
+                fontFamily: "'Fira Code', monospace",
+                color: active === s ? "#00ff9f" : "rgba(255,255,255,0.6)",
+                fontSize: 13,
+                letterSpacing: 2,
+                textDecoration: "none",
+                textTransform: "uppercase",
+                padding: "1rem clamp(1rem,5vw,2rem)",
+                borderBottom: "1px solid rgba(0,255,160,0.06)",
+                transition: "color 0.2s",
+              }}
+            >
+              {active === s ? "> " : "  "}
+              {s}
+            </a>
+          ))}
+        </div>
+      )}
+    </>
   );
+}
+
+// Custom hook for window width
+function useWindowWidth() {
+  const [width, setWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200,
+  );
+  useEffect(() => {
+    const fn = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
+  return width;
 }
 
 function Badge({ children, color = "#00ff9f" }) {
@@ -244,7 +352,7 @@ function Badge({ children, color = "#00ff9f" }) {
       style={{
         display: "inline-block",
         fontFamily: "'Fira Code', monospace",
-        fontSize: 11,
+        fontSize: "clamp(10px,2vw,11px)",
         color,
         border: `1px solid ${color}`,
         padding: "2px 10px",
@@ -261,12 +369,12 @@ function Badge({ children, color = "#00ff9f" }) {
 
 function SectionTitle({ label, title }) {
   return (
-    <div style={{ marginBottom: "3rem" }}>
+    <div style={{ marginBottom: "clamp(1.5rem,5vw,3rem)" }}>
       <div
         style={{
           fontFamily: "'Fira Code', monospace",
           color: "#00ff9f",
-          fontSize: 12,
+          fontSize: "clamp(10px,2vw,12px)",
           letterSpacing: 3,
           marginBottom: 8,
         }}
@@ -277,7 +385,7 @@ function SectionTitle({ label, title }) {
         style={{
           fontFamily: "'Space Grotesk', sans-serif",
           fontWeight: 800,
-          fontSize: "clamp(2rem,5vw,3.5rem)",
+          fontSize: "clamp(1.8rem,6vw,3.5rem)",
           color: "#fff",
           margin: 0,
           lineHeight: 1,
@@ -337,16 +445,23 @@ function HeroSection() {
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
-        padding: "0 clamp(1.5rem,8vw,10rem)",
+        padding: "0 clamp(1.2rem,6vw,10rem)",
         position: "relative",
       }}
     >
-      <div style={{ maxWidth: 700 }}>
+      <div
+        style={{
+          maxWidth: 700,
+          width: "100%",
+          paddingTop: 80,
+          paddingBottom: 40,
+        }}
+      >
         <div
           style={{
             fontFamily: "'Fira Code', monospace",
             color: "#00ff9f",
-            fontSize: 13,
+            fontSize: "clamp(11px,2.5vw,13px)",
             letterSpacing: 2,
             marginBottom: 16,
           }}
@@ -357,7 +472,7 @@ function HeroSection() {
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 900,
-            fontSize: "clamp(3rem,8vw,6rem)",
+            fontSize: "clamp(2.4rem,9vw,6rem)",
             color: "#fff",
             margin: "0 0 0.5rem",
             lineHeight: 1,
@@ -371,9 +486,9 @@ function HeroSection() {
         <div
           style={{
             fontFamily: "'Fira Code', monospace",
-            fontSize: "clamp(1rem,2.5vw,1.4rem)",
+            fontSize: "clamp(0.85rem,3vw,1.4rem)",
             color: "rgba(255,255,255,0.6)",
-            marginBottom: 32,
+            marginBottom: 24,
             minHeight: 36,
           }}
         >
@@ -385,25 +500,31 @@ function HeroSection() {
         <p
           style={{
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 16,
+            fontSize: "clamp(13px,2.5vw,16px)",
             color: "rgba(255,255,255,0.5)",
             maxWidth: 520,
             lineHeight: 1.8,
-            marginBottom: 40,
+            marginBottom: 32,
           }}
         >
           B.Tech CS @ IIIT Sri City · Knight @Leetcode · Pupil @Codeforces ·
           <br /> 2* @Codechef · Crafting scalable backends and clean frontends.
         </p>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "clamp(10px,3vw,16px)",
+            flexWrap: "wrap",
+          }}
+        >
           <a
             href="#projects"
             style={{
               fontFamily: "'Fira Code', monospace",
               background: "#00ff9f",
               color: "#050e0a",
-              padding: "12px 28px",
-              fontSize: 13,
+              padding: "clamp(10px,2.5vw,12px) clamp(16px,4vw,28px)",
+              fontSize: "clamp(11px,2.5vw,13px)",
               fontWeight: 700,
               letterSpacing: 1.5,
               border: "none",
@@ -420,8 +541,8 @@ function HeroSection() {
               fontFamily: "'Fira Code', monospace",
               background: "transparent",
               color: "#00ff9f",
-              padding: "12px 28px",
-              fontSize: 13,
+              padding: "clamp(10px,2.5vw,12px) clamp(16px,4vw,28px)",
+              fontSize: "clamp(11px,2.5vw,13px)",
               fontWeight: 700,
               letterSpacing: 1.5,
               border: "1px solid #00ff9f",
@@ -432,7 +553,14 @@ function HeroSection() {
             ./contact-me
           </a>
         </div>
-        <div style={{ display: "flex", gap: 24, marginTop: 48 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "clamp(16px,5vw,24px)",
+            marginTop: "clamp(28px,5vw,48px)",
+            flexWrap: "wrap",
+          }}
+        >
           {[
             { label: "700+", sub: "Problems Accepted" },
             { label: "1875", sub: "Peak Rating" },
@@ -443,7 +571,7 @@ function HeroSection() {
                 style={{
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontWeight: 800,
-                  fontSize: "clamp(1.5rem,4vw,2.2rem)",
+                  fontSize: "clamp(1.3rem,5vw,2.2rem)",
                   color: "#00ff9f",
                 }}
               >
@@ -452,7 +580,7 @@ function HeroSection() {
               <div
                 style={{
                   fontFamily: "'Fira Code', monospace",
-                  fontSize: 10,
+                  fontSize: "clamp(9px,2vw,10px)",
                   color: "rgba(255,255,255,0.4)",
                   letterSpacing: 1,
                 }}
@@ -468,11 +596,14 @@ function HeroSection() {
 }
 
 function AboutSection() {
+  const width = useWindowWidth();
+  const isMobile = width < 768;
+
   return (
     <section
       id="about"
       style={{
-        padding: "8rem clamp(1.5rem,8vw,10rem)",
+        padding: "clamp(4rem,10vw,8rem) clamp(1.2rem,6vw,10rem)",
         borderTop: "1px solid rgba(0,255,160,0.08)",
       }}
     >
@@ -480,8 +611,8 @@ function AboutSection() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "4rem",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+          gap: "clamp(2rem,5vw,4rem)",
           alignItems: "start",
         }}
       >
@@ -489,7 +620,7 @@ function AboutSection() {
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 16,
+              fontSize: "clamp(14px,2.5vw,16px)",
               color: "rgba(255,255,255,0.65)",
               lineHeight: 2,
               marginBottom: 24,
@@ -503,7 +634,7 @@ function AboutSection() {
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 16,
+              fontSize: "clamp(14px,2.5vw,16px)",
               color: "rgba(255,255,255,0.65)",
               lineHeight: 2,
               marginBottom: 32,
@@ -511,7 +642,7 @@ function AboutSection() {
           >
             My interest spans across system design, competitive programming, and
             crafting full-stack applications that are both performant and
-            intuitive. I love turning ideas into production-ready software.
+            intuitive.
           </p>
           <div
             style={{
@@ -520,9 +651,10 @@ function AboutSection() {
               padding: "1.5rem",
               borderRadius: 4,
               fontFamily: "'Fira Code', monospace",
-              fontSize: 12,
+              fontSize: "clamp(11px,2vw,12px)",
               color: "rgba(255,255,255,0.5)",
               lineHeight: 2,
+              overflowX: "auto",
             }}
           >
             <span style={{ color: "#00ff9f" }}>const</span> kartik = {"{"}
@@ -540,7 +672,7 @@ function AboutSection() {
             {"}"};
           </div>
         </div>
-        <div>
+        <div style={{ marginTop: isMobile ? "2rem" : 0 }}>
           {[
             {
               label: "LeetCode",
@@ -548,13 +680,7 @@ function AboutSection() {
               color: "#f89820",
               href: "https://leetcode.com/u/codeBlind007/",
               logo: (
-                <svg
-                  viewBox="0 0 24 24"
-                  width="26"
-                  height="26"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
                   <path
                     d="M13.483 0a1.374 1.374 0 0 0-.961.438L7.116 6.226l-3.854 4.126a5.266 5.266 0 0 0-1.209 2.104 5.35 5.35 0 0 0-.125.513 5.527 5.527 0 0 0 .062 2.362 5.83 5.83 0 0 0 .349 1.017 5.938 5.938 0 0 0 1.271 1.818l4.277 4.193.039.038c2.248 2.165 5.852 2.133 8.063-.074l2.396-2.392c.54-.54.54-1.414.003-1.955a1.378 1.378 0 0 0-1.951-.003l-2.396 2.392a3.021 3.021 0 0 1-4.205.038l-.02-.019-4.276-4.193c-.652-.64-.972-1.469-.948-2.263a2.68 2.68 0 0 1 .066-.523 2.545 2.545 0 0 1 .619-1.164L9.13 8.114c1.058-1.134 3.204-1.27 4.43-.278l3.501 2.831c.593.48 1.461.387 1.94-.207a1.384 1.384 0 0 0-.207-1.943l-3.5-2.831c-.8-.647-1.766-1.045-2.774-1.202l2.015-2.158A1.384 1.384 0 0 0 13.483 0zm-2.866 12.815a1.38 1.38 0 0 0-1.38 1.382 1.38 1.38 0 0 0 1.38 1.382H20.79a1.38 1.38 0 0 0 1.38-1.382 1.38 1.38 0 0 0-1.38-1.382z"
                     fill="#f89820"
@@ -568,12 +694,7 @@ function AboutSection() {
               color: "#b17a56",
               href: "https://codechef.com",
               logo: (
-                <svg
-                  viewBox="0 0 24 24"
-                  width="26"
-                  height="26"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg viewBox="0 0 24 24" width="26" height="26">
                   <path
                     d="M11.257.004C7.37.072 3.693 2.98 2.7 6.653c-.463 1.685-.198 3.437-.268 5.155-.08 1.795-.551 3.636-1.7 5.054C.104 17.67-.498 19.542.474 20.797c.674.863 1.905 1.074 2.95.762 1.045-.313 1.899-1.05 2.716-1.773a20.453 20.453 0 0 0 2.039-2.144c.361.26.753.477 1.166.645-1.009 1.075-2.031 2.249-2.36 3.72-.232 1.032.029 2.277 1.004 2.753.693.336 1.512.127 2.168-.23.656-.356 1.202-.886 1.738-1.406.537.52 1.082 1.049 1.737 1.406.656.357 1.475.567 2.169.23.974-.476 1.236-1.72 1.003-2.753-.329-1.47-1.35-2.644-2.359-3.72.413-.167.806-.384 1.166-.644a20.47 20.47 0 0 0 2.04 2.143c.816.724 1.67 1.46 2.715 1.773 1.045.312 2.276.1 2.95-.762.972-1.255.37-3.127-.258-4.43-1.148-1.418-1.619-3.26-1.7-5.054-.069-1.718.196-3.47-.267-5.155C20.258 2.866 16.39-.073 12.401.004h-1.144zm.77 1.127c.217.006.434.019.65.038 2.674.239 5.24 1.984 6.35 4.448.632 1.396.65 2.952.642 4.464-.008 2.012.417 4.069 1.558 5.739.516.843 1.349 1.616 1.313 2.668-.026.733-.634 1.37-1.34 1.582-.706.213-1.457-.004-2.097-.356-1.28-.7-2.22-1.836-3.104-2.955.74-.811 1.304-1.797 1.59-2.866.22-.82.24-1.706-.035-2.515-.328-.966-1.073-1.736-1.974-2.182-.897-.444-1.926-.576-2.916-.512-.988.064-1.984.348-2.815.906-.824.553-1.459 1.384-1.741 2.33-.255.852-.199 1.77.055 2.617.302 1.011.88 1.934 1.624 2.694-.819 1.072-1.736 2.164-2.977 2.818-.642.34-1.376.543-2.07.334-.694-.208-1.293-.824-1.336-1.546-.055-1.04.751-1.812 1.258-2.653 1.14-1.67 1.567-3.727 1.558-5.739-.007-1.512.01-3.068.642-4.464 1.068-2.358 3.483-4.081 6.032-4.427.306-.042.612-.067.918-.073l.015-.09zm-.018 8.005c.617-.01 1.24.102 1.808.38.698.34 1.268.946 1.531 1.678.317.885.22 1.895-.178 2.737-.434.918-1.21 1.659-2.12 2.098-.468.225-.988.35-1.502.363a4.12 4.12 0 0 1-1.498-.306c-.929-.386-1.73-1.1-2.196-2.001-.44-.854-.563-1.876-.278-2.793.258-.832.83-1.554 1.571-2.01.567-.352 1.232-.536 1.862-.146zm-.043 1.02a2.982 2.982 0 0 0-1.415.444c-.57.355-1.014.913-1.213 1.558-.22.709-.125 1.506.236 2.148.373.665.997 1.187 1.717 1.453.384.143.796.199 1.2.173.459-.03.91-.168 1.312-.397.766-.44 1.34-1.171 1.576-2.017.208-.742.118-1.565-.27-2.225-.3-.506-.774-.91-1.322-1.12a2.974 2.974 0 0 0-1.821-.017zm-4.28 8.682c.34.107.687.185 1.038.234-.176.39-.394.772-.66 1.118a5.46 5.46 0 0 1-.67-.645c.097-.24.188-.48.292-.707zm8.644 0c.104.228.196.468.293.708a5.46 5.46 0 0 1-.672.644 5.544 5.544 0 0 1-.659-1.118c.352-.05.698-.127 1.038-.234zm-4.323.545c.268 0 .537.01.803.034-.154.35-.328.695-.534 1.018a6.28 6.28 0 0 1-.537-1.018c.09-.008.179-.018.268-.034zm-2.423.39c.285.493.613.963.99 1.389-.466.469-.964.94-1.546 1.224-.34.165-.75.267-1.1.113-.35-.155-.508-.551-.488-.918.054-1.013.826-1.9 1.594-2.548a5.1 5.1 0 0 0 .55.74zm4.845 0c.183-.243.375-.484.55-.74.768.648 1.54 1.535 1.594 2.548.02.367-.138.763-.488.918-.35.154-.76.052-1.1-.113-.582-.284-1.08-.755-1.546-1.224.377-.426.705-.896.99-1.389z"
                     fill="#b17a56"
@@ -587,12 +708,7 @@ function AboutSection() {
               color: "#1a8cff",
               href: "https://codeforces.com/profile/codeblind007",
               logo: (
-                <svg
-                  viewBox="0 0 24 24"
-                  width="26"
-                  height="26"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg viewBox="0 0 24 24" width="26" height="26">
                   <path
                     d="M4.5 7.5A1.5 1.5 0 0 1 6 9v10.5A1.5 1.5 0 0 1 4.5 21h-3A1.5 1.5 0 0 1 0 19.5V9A1.5 1.5 0 0 1 1.5 7.5h3zm9-4.5A1.5 1.5 0 0 1 15 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 19.5v-15A1.5 1.5 0 0 1 10.5 3h3zm9 7.5A1.5 1.5 0 0 1 24 12v7.5A1.5 1.5 0 0 1 22.5 21h-3A1.5 1.5 0 0 1 18 19.5V12a1.5 1.5 0 0 1 1.5-1.5h3z"
                     fill="#1a8cff"
@@ -645,13 +761,13 @@ function AboutSection() {
               >
                 {cp.logo}
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div
                   style={{
                     fontFamily: "'Space Grotesk', sans-serif",
                     fontWeight: 700,
                     color: "#fff",
-                    fontSize: 15,
+                    fontSize: "clamp(13px,3vw,15px)",
                   }}
                 >
                   {cp.label}
@@ -659,7 +775,7 @@ function AboutSection() {
                 <div
                   style={{
                     fontFamily: "'Fira Code', monospace",
-                    fontSize: 11,
+                    fontSize: "clamp(10px,2vw,11px)",
                     color: cp.color,
                     marginTop: 3,
                   }}
@@ -673,13 +789,13 @@ function AboutSection() {
                   fontFamily: "'Fira Code', monospace",
                   fontSize: 16,
                   color: `${cp.color}66`,
+                  flexShrink: 0,
                 }}
               >
                 →
               </div>
             </a>
           ))}
-
           <div
             style={{
               background: "rgba(0,255,160,0.04)",
@@ -692,7 +808,7 @@ function AboutSection() {
             <div
               style={{
                 fontFamily: "'Fira Code', monospace",
-                fontSize: 11,
+                fontSize: "clamp(10px,2vw,11px)",
                 color: "#00ff9f",
                 marginBottom: 8,
                 letterSpacing: 2,
@@ -705,7 +821,7 @@ function AboutSection() {
                 fontFamily: "'Space Grotesk', sans-serif",
                 color: "#fff",
                 fontWeight: 700,
-                fontSize: 14,
+                fontSize: "clamp(13px,2.5vw,14px)",
               }}
             >
               B.Tech Computer Science
@@ -714,7 +830,7 @@ function AboutSection() {
               style={{
                 fontFamily: "'DM Sans', sans-serif",
                 color: "rgba(255,255,255,0.45)",
-                fontSize: 12,
+                fontSize: "clamp(11px,2vw,12px)",
                 marginTop: 4,
               }}
             >
@@ -732,7 +848,7 @@ function ExperienceSection() {
     <section
       id="experience"
       style={{
-        padding: "8rem clamp(1.5rem,8vw,10rem)",
+        padding: "clamp(4rem,10vw,8rem) clamp(1.2rem,6vw,10rem)",
         borderTop: "1px solid rgba(0,255,160,0.08)",
       }}
     >
@@ -777,8 +893,8 @@ function ExperienceSection() {
           <div
             key={i}
             style={{
-              paddingLeft: "2.5rem",
-              paddingBottom: "3rem",
+              paddingLeft: "clamp(1.5rem,5vw,2.5rem)",
+              paddingBottom: "clamp(2rem,5vw,3rem)",
               position: "relative",
             }}
           >
@@ -797,7 +913,7 @@ function ExperienceSection() {
             <div
               style={{
                 fontFamily: "'Fira Code', monospace",
-                fontSize: 11,
+                fontSize: "clamp(10px,2vw,11px)",
                 color: exp.color,
                 letterSpacing: 2,
                 marginBottom: 6,
@@ -809,7 +925,7 @@ function ExperienceSection() {
               style={{
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 800,
-                fontSize: "clamp(1.2rem,3vw,1.6rem)",
+                fontSize: "clamp(1.1rem,4vw,1.6rem)",
                 color: "#fff",
                 marginBottom: 4,
               }}
@@ -820,20 +936,25 @@ function ExperienceSection() {
               style={{
                 fontFamily: "'DM Sans', sans-serif",
                 color: "rgba(255,255,255,0.4)",
-                fontSize: 13,
+                fontSize: "clamp(12px,2.5vw,13px)",
                 marginBottom: 16,
               }}
             >
               @ {exp.company}
             </div>
-            <ul style={{ margin: "0 0 16px", paddingLeft: 20 }}>
+            <ul
+              style={{
+                margin: "0 0 16px",
+                paddingLeft: "clamp(16px,4vw,20px)",
+              }}
+            >
               {exp.points.map((p, j) => (
                 <li
                   key={j}
                   style={{
                     fontFamily: "'DM Sans', sans-serif",
                     color: "rgba(255,255,255,0.6)",
-                    fontSize: 14,
+                    fontSize: "clamp(13px,2.5vw,14px)",
                     lineHeight: 1.8,
                     marginBottom: 6,
                   }}
@@ -874,18 +995,20 @@ function ProjectCard({
         background: hovered ? "rgba(0,255,160,0.04)" : "rgba(255,255,255,0.02)",
         border: `1px solid ${hovered ? accent : "rgba(0,255,160,0.1)"}`,
         borderRadius: 4,
-        padding: "2rem",
+        padding: "clamp(1.2rem,4vw,2rem)",
         transition: "all 0.3s",
         transform: hovered ? "translateY(-4px)" : "none",
         boxShadow: hovered ? `0 20px 60px rgba(0,255,160,0.1)` : "none",
         cursor: "pointer",
       }}
     >
-      <div style={{ fontSize: 32, marginBottom: 12 }}>{emoji}</div>
+      <div style={{ fontSize: "clamp(24px,5vw,32px)", marginBottom: 12 }}>
+        {emoji}
+      </div>
       <div
         style={{
           fontFamily: "'Fira Code', monospace",
-          fontSize: 10,
+          fontSize: "clamp(9px,2vw,10px)",
           color: accent,
           letterSpacing: 2,
           marginBottom: 8,
@@ -897,7 +1020,7 @@ function ProjectCard({
         style={{
           fontFamily: "'Space Grotesk', sans-serif",
           fontWeight: 800,
-          fontSize: "1.4rem",
+          fontSize: "clamp(1.1rem,4vw,1.4rem)",
           color: "#fff",
           margin: "0 0 12px",
         }}
@@ -907,7 +1030,7 @@ function ProjectCard({
       <p
         style={{
           fontFamily: "'DM Sans', sans-serif",
-          fontSize: 14,
+          fontSize: "clamp(13px,2.5vw,14px)",
           color: "rgba(255,255,255,0.55)",
           lineHeight: 1.8,
           marginBottom: 20,
@@ -930,7 +1053,7 @@ function ProjectCard({
           style={{
             fontFamily: "'Fira Code', monospace",
             color: accent,
-            fontSize: 11,
+            fontSize: "clamp(10px,2vw,11px)",
             letterSpacing: 2,
             textDecoration: "none",
             borderBottom: `1px solid ${accent}`,
@@ -949,7 +1072,7 @@ function ProjectsSection() {
     <section
       id="projects"
       style={{
-        padding: "8rem clamp(1.5rem,8vw,10rem)",
+        padding: "clamp(4rem,10vw,8rem) clamp(1.2rem,6vw,10rem)",
         borderTop: "1px solid rgba(0,255,160,0.08)",
       }}
     >
@@ -957,8 +1080,8 @@ function ProjectsSection() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
-          gap: "1.5rem",
+          gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,320px),1fr))",
+          gap: "clamp(1rem,3vw,1.5rem)",
         }}
       >
         <ProjectCard
@@ -1040,12 +1163,11 @@ function SkillsSection() {
       ],
     },
   ];
-
   return (
     <section
       id="skills"
       style={{
-        padding: "8rem clamp(1.5rem,8vw,10rem)",
+        padding: "clamp(4rem,10vw,8rem) clamp(1.2rem,6vw,10rem)",
         borderTop: "1px solid rgba(0,255,160,0.08)",
       }}
     >
@@ -1053,8 +1175,8 @@ function SkillsSection() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
-          gap: "1.2rem",
+          gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,260px),1fr))",
+          gap: "clamp(0.8rem,2vw,1.2rem)",
         }}
       >
         {categories.map((cat) => (
@@ -1064,7 +1186,7 @@ function SkillsSection() {
               background: "rgba(255,255,255,0.02)",
               border: "1px solid rgba(0,255,160,0.1)",
               borderRadius: 4,
-              padding: "1.5rem",
+              padding: "clamp(1rem,3vw,1.5rem)",
             }}
           >
             <div
@@ -1075,11 +1197,13 @@ function SkillsSection() {
                 marginBottom: 16,
               }}
             >
-              <span style={{ fontSize: 18 }}>{cat.icon}</span>
+              <span style={{ fontSize: "clamp(15px,3vw,18px)" }}>
+                {cat.icon}
+              </span>
               <span
                 style={{
                   fontFamily: "'Fira Code', monospace",
-                  fontSize: 11,
+                  fontSize: "clamp(10px,2vw,11px)",
                   color: cat.color,
                   letterSpacing: 2,
                 }}
@@ -1105,16 +1229,16 @@ function ContactSection() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const width = useWindowWidth();
+  const isMobile = width < 768;
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setStatus("");
-
     try {
       if (typeof window.emailjs !== "undefined") {
         await window.emailjs.send(
@@ -1127,8 +1251,6 @@ function ContactSection() {
           },
           PUBLIC_KEY,
         );
-
-        // Send auto-reply to THEM
         await window.emailjs.send(
           SERVICE_ID,
           REPLY_TEMPLATE_ID,
@@ -1142,7 +1264,6 @@ function ContactSection() {
         setStatus("success");
         setForm({ name: "", email: "", message: "" });
       } else {
-        // Fallback: open mailto
         window.location.href = `mailto:kartik.r23@iiits.in?subject=Portfolio Contact from ${form.name}&body=${form.message}`;
         setStatus("success");
       }
@@ -1158,7 +1279,7 @@ function ContactSection() {
     border: "1px solid rgba(0,255,160,0.2)",
     color: "#fff",
     padding: "12px 16px",
-    fontSize: 14,
+    fontSize: "clamp(13px,2.5vw,14px)",
     fontFamily: "'DM Sans', sans-serif",
     outline: "none",
     borderRadius: 3,
@@ -1171,7 +1292,7 @@ function ContactSection() {
     <section
       id="contact"
       style={{
-        padding: "8rem clamp(1.5rem,8vw,10rem)",
+        padding: "clamp(4rem,10vw,8rem) clamp(1.2rem,6vw,10rem)",
         borderTop: "1px solid rgba(0,255,160,0.08)",
       }}
     >
@@ -1179,8 +1300,8 @@ function ContactSection() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "4rem",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+          gap: "clamp(2rem,5vw,4rem)",
           alignItems: "start",
         }}
       >
@@ -1188,7 +1309,7 @@ function ContactSection() {
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 16,
+              fontSize: "clamp(14px,2.5vw,16px)",
               color: "rgba(255,255,255,0.55)",
               lineHeight: 1.9,
               marginBottom: 32,
@@ -1226,20 +1347,22 @@ function ContactSection() {
                 display: "flex",
                 gap: 16,
                 alignItems: "center",
-                marginBottom: 16,
+                marginBottom: 12,
                 padding: "12px 16px",
                 background: "rgba(255,255,255,0.02)",
                 border: "1px solid rgba(0,255,160,0.08)",
                 borderRadius: 3,
+                flexWrap: "wrap",
               }}
             >
               <span
                 style={{
                   fontFamily: "'Fira Code', monospace",
-                  fontSize: 10,
+                  fontSize: "clamp(9px,2vw,10px)",
                   color: "#00ff9f",
                   letterSpacing: 1,
-                  minWidth: 60,
+                  minWidth: 55,
+                  flexShrink: 0,
                 }}
               >
                 {c.label}
@@ -1251,8 +1374,9 @@ function ContactSection() {
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
                   color: "rgba(255,255,255,0.6)",
-                  fontSize: 13,
+                  fontSize: "clamp(12px,2.5vw,13px)",
                   textDecoration: "none",
+                  wordBreak: "break-all",
                 }}
               >
                 {c.value}
@@ -1260,19 +1384,19 @@ function ContactSection() {
             </div>
           ))}
         </div>
-        <div>
+        <div style={{ marginTop: isMobile ? "2rem" : 0 }}>
           <div
             style={{
               background: "rgba(0,255,160,0.03)",
               border: "1px solid rgba(0,255,160,0.15)",
-              padding: "2rem",
+              padding: "clamp(1.2rem,4vw,2rem)",
               borderRadius: 4,
             }}
           >
             <div
               style={{
                 fontFamily: "'Fira Code', monospace",
-                fontSize: 11,
+                fontSize: "clamp(10px,2vw,11px)",
                 color: "#00ff9f",
                 letterSpacing: 2,
                 marginBottom: 20,
@@ -1311,7 +1435,7 @@ function ContactSection() {
                 background: loading ? "rgba(0,255,160,0.4)" : "#00ff9f",
                 color: "#050e0a",
                 padding: "12px 32px",
-                fontSize: 13,
+                fontSize: "clamp(11px,2.5vw,13px)",
                 fontWeight: 700,
                 letterSpacing: 1.5,
                 border: "none",
@@ -1360,7 +1484,7 @@ function Footer() {
   return (
     <footer
       style={{
-        padding: "2rem clamp(1.5rem,8vw,10rem)",
+        padding: "2rem clamp(1.2rem,6vw,10rem)",
         borderTop: "1px solid rgba(0,255,160,0.08)",
         display: "flex",
         justifyContent: "space-between",
@@ -1373,7 +1497,7 @@ function Footer() {
         style={{
           fontFamily: "'Fira Code', monospace",
           color: "rgba(255,255,255,0.25)",
-          fontSize: 11,
+          fontSize: "clamp(10px,2vw,11px)",
           letterSpacing: 1,
         }}
       >
@@ -1383,7 +1507,7 @@ function Footer() {
         style={{
           fontFamily: "'Fira Code', monospace",
           color: "#00ff9f",
-          fontSize: 11,
+          fontSize: "clamp(10px,2vw,11px)",
           letterSpacing: 1,
         }}
       >
@@ -1398,20 +1522,17 @@ export default function App() {
   const [active, setActive] = useState("home");
 
   useEffect(() => {
-    // Load Google Fonts
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href =
       "https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Space+Grotesk:wght@400;700;800;900&family=DM+Sans:wght@400;500&display=swap";
     document.head.appendChild(link);
 
-    // Load EmailJS
     const script = document.createElement("script");
     script.src =
       "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
     document.head.appendChild(script);
 
-    // CSS animations
     const style = document.createElement("style");
     style.textContent = `
       @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
@@ -1423,17 +1544,27 @@ export default function App() {
       ::-webkit-scrollbar-track { background: #050e0a; }
       ::-webkit-scrollbar-thumb { background: #00ff9f44; border-radius: 2px; }
       input:focus, textarea:focus { border-color: rgba(0,255,160,0.5) !important; }
+      @media (max-width: 480px) {
+        h1 { letter-spacing: -1px !important; }
+      }
     `;
     document.head.appendChild(style);
 
-    // Section observer
+    const metaViewport = document.querySelector("meta[name=viewport]");
+    if (!metaViewport) {
+      const meta = document.createElement("meta");
+      meta.name = "viewport";
+      meta.content = "width=device-width, initial-scale=1.0";
+      document.head.appendChild(meta);
+    }
+
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) setActive(e.target.id);
         });
       },
-      { threshold: 0.4 },
+      { threshold: 0.3 },
     );
     SECTIONS.forEach((id) => {
       const el = document.getElementById(id);
